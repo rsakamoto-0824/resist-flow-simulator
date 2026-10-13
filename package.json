@@ -1,0 +1,8 @@
+{
+  "name": "resist-flow-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Numerical reference checks for the MATLAB resist flow simulator",
+  "scripts": { "test": "node --test verification/js/tests/*.test.js" },
+  "engines": { "node": ">=18" }
+}

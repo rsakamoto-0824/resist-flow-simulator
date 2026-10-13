@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Resist Flow Lab — Mac テスト版</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="solver.js"></script>
+  <script defer src="infiltration.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">≋</span><span>Resist Flow <strong>Lab</strong></span><span class="edition">MAC TEST</span></div>
+    <div class="header-meta"><span class="local-dot"></span> オフライン計算 <span class="separator">/</span> MATLAB コンパイル版ではありません</div>
+  </header>
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="sidebar-heading"><span class="eyebrow">SIMULATION SETUP</span><h1>計算条件</h1><p>モデルを選び、材料と工程を設定。</p></div>
+      <form id="configForm" novalidate>
+        <section class="input-section">
+          <label class="field-label" for="mode">計算モデル</label>
+          <select id="mode" name="mode"><option value="leveling">2D リフロー・段差平坦化</option><option value="spin">均一膜スピン塗布・蒸発</option><option value="infiltration">細隙への充填</option></select>
+          <label class="field-label spaced" for="preset">サンプル条件</label>
+          <select id="preset"><option value="leveling">正弦波の平坦化</option><option value="step">浅い基板段差</option><option value="spin">回転塗布と溶剤蒸発</option><option value="infiltration">濡れによるスリット充填</option></select>
+          <p class="input-note">サンプルは仮想材料です。条件は自由に変更できます。</p>
+        </section>
+        <div id="parameterGroups"></div>
+      </form>
+      <section class="input-section file-actions">
+        <div class="section-heading"><span>条件ファイル</span><span class="section-number">JSON</span></div>
+        <div class="button-pair"><button id="saveConfig" class="button secondary small">条件を保存</button><button id="loadConfig" class="button secondary small">読み込む</button></div>
+        <input id="configFile" type="file" accept=".json,application/json" hidden>
+        <div id="customImport"><button id="loadMatrix" class="text-button">＋ 初期膜厚 CSV を読み込む</button><button id="loadSubstrate" class="text-button">＋ 基板高さ CSV を読み込む</button><p id="customDataNote" class="input-note"></p></div>
+        <input id="matrixFile" type="file" accept=".csv,text/csv" hidden>
+      </section>
+      <footer class="sidebar-footer">Resist Flow Lab <span>0.1 · macOS preview</span></footer>
+    </aside>
+    <main>
+      <div class="main-heading"><div><div class="eyebrow" id="modelEyebrow">THIN FILM / CAPILLARY FLOW</div><h2 id="modelTitle">表面張力による、膜の平坦化。</h2><p id="modelDescription">膜厚分布と時間変化を観察して、材料・形状の影響を比較します。</p></div><div class="status-tag" id="statusTag"><i></i><span>準備完了</span></div></div>
+      <div class="toolbar"><div class="run-actions"><button class="button primary" id="runButton"><span>▶</span> 計算を実行</button><button class="button secondary" id="pauseButton" disabled>一時停止</button><button class="button quiet" id="resetButton">リセット</button></div><span id="runInfo">条件を確認して計算を実行してください</span></div>
+      <div id="alert" class="alert" role="status" hidden></div>
+      <section class="statistics" id="statistics" aria-label="計算結果の統計"></section>
+      <section class="panel main-panel">
+        <div class="panel-heading"><div><span class="panel-kicker">SPATIAL VIEW</span><h3 id="mapTitle">液体膜厚マップ</h3></div><div class="view-switch" aria-label="表示方法"><button id="mapView" class="active" aria-pressed="true">2D マップ</button><button id="surfaceView" aria-pressed="false">立体表示</button></div></div>
+        <div class="map-layout"><div class="map-canvas-wrap"><canvas id="mapCanvas" aria-label="膜厚または充填状態の図"></canvas></div><div class="map-insight"><span class="eyebrow">AT THIS TIME</span><div class="time-display" id="timeDisplay">0.000<span>s</span></div><div id="mapDetails" class="detail-list"></div><div class="legend"><span id="legendLabel">液体膜厚 [µm]</span><div class="color-bar"></div><div class="legend-range"><span id="colorMin">0.8</span><span id="colorMax">1.2</span></div></div><p class="figure-note" id="figureNote">色は液体膜厚を表します。左右・上下は周期境界です。</p></div></div>
+        <div class="timeline"><span class="timeline-label">時刻</span><input id="timeline" type="range" min="0" max="0" value="0" aria-label="結果を表示する時刻" disabled><span id="timelineValue">0 / 0 s</span><span class="frame-count" id="frameCount">1 frame</span></div>
+      </section>
+      <section class="chart-row">
+        <article class="panel chart-panel"><div class="panel-heading"><div><span class="panel-kicker">CROSS SECTION</span><h3 id="sectionTitle">中央断面</h3></div><span class="chart-legend"><i class="green"></i>現在 <i class="gray"></i>初期</span></div><canvas id="sectionCanvas" aria-label="中央断面図"></canvas><p id="sectionNote" class="chart-note">基板高さ + 膜厚（自由表面） / y = L/2</p></article>
+        <article class="panel chart-panel"><div class="panel-heading"><div><span class="panel-kicker">TIME SERIES</span><h3 id="historyTitle">膜厚の時間変化</h3></div><span class="chart-legend"><i class="green"></i>平均 <i class="mint"></i>最小・最大</span></div><canvas id="historyCanvas" aria-label="時系列の図"></canvas><p class="chart-note" id="historyNote">緑の線：平均膜厚 / 塗り：最小～最大</p></article>
+      </section>
+      <section class="panel results-panel"><div class="panel-heading"><div><span class="panel-kicker">COMPARE & EXPORT</span><h3>結果の比較と保存</h3></div><button id="pinResult" class="button secondary small">現在の結果を比較用に保持</button></div><div id="comparison" class="comparison-empty">基準結果を保持してから条件を変えると、結果を並べて比較できます。</div><div class="export-row"><span>計算済みの結果を出力</span><div><button id="exportHistory" class="button secondary small">時系列 CSV</button><button id="exportMatrix" class="button secondary small">膜厚行列 CSV</button><button id="exportImage" class="button secondary small">図を PNG 保存</button></div></div></section>
+      <details class="model-notes"><summary>モデルの前提と計算メッセージ <span id="warningCount"></span></summary><ul id="warningList"></ul><p>サンプル条件による傾向確認用です。露光・現像反応、非ニュートン性、乾燥後の固体力学は含みません。実材料の予測には物性値の校正と実測との比較が必要です。</p></details>
+      <footer class="main-footer"><span>RESIST FLOW LAB</span><span>入力・計算・保存は、この端末内で完結します。</span></footer>
+    </main>
+  </div>
+</body>
+</html>
